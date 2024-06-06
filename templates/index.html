@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>음성 파일 업로드</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button:not(:disabled):hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            background-color: #004085;
+        }
+        #formUploadLabel, #formUpload, #refineButton {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>음성 파일 업로드</h1>
+        <form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload">
+            <input type="file" id="audioUpload" name="file" accept="audio/*">
+            <br>
+            <button type="submit" id="extractButton" disabled>추출</button>
+        </form>
+        <form id="refineForm" method="post" enctype="multipart/form-data" action="/refine">
+            <input type="file" id="formUpload" name="formFile" accept="application/pdf">
+            <br>
+            <button type="submit" id="refineButton" disabled>정제하기</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('audioUpload').addEventListener('change', function() {
+            var fileInput = document.getElementById('audioUpload');
+            var extractButton = document.getElementById('extractButton');
+            
+            if (fileInput.files.length > 0) {
+                extractButton.disabled = false;
+            } else {
+                extractButton.disabled = true;
+            }
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            var formData = new FormData(this);
+            var extractButton = document.getElementById('extractButton');
+            extractButton.disabled = true;
+            extractButton.textContent = '추출 중...';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                return response.text(); // Assuming server returns a success message
+            }).then(text => {
+                if (text === 'success') {
+                    var refineButton = document.getElementById('refineButton');
+                    var formUpload = document.getElementById('formUpload');
+                    
+                    formUpload.style.display = 'block';
+                    refineButton.style.display = 'block';
+
+                    formUpload.addEventListener('change', function() {
+                        if (formUpload.files.length > 0) {
+                            refineButton.disabled = false;
+                        } else {
+                            refineButton.disabled = true;
+                        }
+                    });
+
+                    extractButton.textContent = '추출';
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                extractButton.disabled = false;
+                extractButton.textContent = '추출';
+            });
+        });
+
+        document.getElementById('refineForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the default form submission
+            var refineButton = document.getElementById('refineButton');
+            refineButton.disabled = true;
+            refineButton.textContent = '정제 중...';
+
+            var formData = new FormData(this);
+
+            fetch('/refine', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                return response.text(); // Assuming server returns a success message
+            }).then(text => {
+                if (text === 'success') {
+                    refineButton.textContent = '정제 완료';
+                } else {
+                    refineButton.disabled = false;
+                    refineButton.textContent = '정제하기';
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                refineButton.disabled = false;
+                refineButton.textContent = '정제하기';
+            });
+        });
+    </script>
+</body>
+</html>
